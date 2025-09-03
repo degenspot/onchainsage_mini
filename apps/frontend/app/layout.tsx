@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { StarknetProvider } from "@/context/StarknetContext";
+import { QueryProvider } from "@/providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,10 +19,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <StarknetProvider>
-          <div className="min-h-screen">
-            {/* <Navbar /> */}
-            {children}
-          </div>
+          <QueryProvider>
+            <div className="min-h-screen">
+              {/* <Navbar /> */}
+              {children}
+            </div>
+          </QueryProvider>
         </StarknetProvider>
       </body>
     </html>

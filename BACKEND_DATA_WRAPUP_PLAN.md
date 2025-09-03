@@ -76,6 +76,10 @@ Deliverables:
    - `social/TrendingProvider` → stub returning deterministic counts for a symbol list (replace later with real source).
 2) Version them as simple TypeScript modules consumed by worker.
 
+NOTE: Follow-up (deferred)
+- Replace social stub with a real provider (e.g., LunarCrush free/community API).
+- Add `LUNARCRUSH_KEY` to env; respect rate limits; map to `SocialSnapshot`.
+
 Deliverables:
 - `packages/connectors/market/dexscreener.ts`
 - `packages/connectors/social/trending.ts`

@@ -1,20 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo } from "react"
 import { ArrowDown, ArrowUp, ArrowUpRight, CircleAlert, Zap } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-type ApiSignal = {
-  tokenId: string
-  chain: string
-  address: string
-  symbol?: string
-  score: number
-  label: "HYPE_BUILDING" | "FAKE_PUMP" | "DEAD_ZONE" | "WHALE_PLAY"
-  at: string
-}
+import { useTopSignals } from "@/lib/query/hooks"
+import { apiSocket } from "@/lib/ws/socket"
+import { useQueryClient } from "@tanstack/react-query"
 
 type SignalRow = {
   id: string
@@ -27,7 +20,7 @@ type SignalRow = {
   timestamp: string
 }
 
-const mapApiToRows = (signals: ApiSignal[]): SignalRow[] => {
+const mapApiToRows = (signals: Array<{ tokenId: string; address: string; symbol?: string; score: number; label: string; at: string }>): SignalRow[] => {
   return signals.map((s, idx) => ({
     id: `${s.tokenId}-${idx}`,
     token: s.symbol ?? s.address.slice(0, 6),
@@ -45,29 +38,25 @@ type SignalTableProps = {
 }
 
 export function SignalTable({ category }: SignalTableProps) {
-  const [rows, setRows] = useState<SignalRow[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { data, isLoading, error } = useTopSignals("24h", 10)
 
   useEffect(() => {
-    const controller = new AbortController()
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-    fetch(`${apiBase}/signals/top?window=24h&limit=10`, { signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data: ApiSignal[] = await res.json()
-        setRows(mapApiToRows(data))
-      })
-      .catch((e) => {
-        if (e.name !== "AbortError") setError(String(e))
-      })
-    return () => controller.abort()
-  }, [])
+    apiSocket.connect()
+    const off = apiSocket.on("signals:live", () => {
+      queryClient.invalidateQueries({ queryKey: ["signals", "top"] })
+    })
+    return () => {
+      off()
+    }
+  }, [queryClient])
 
+  const rows = useMemo(() => (data ? mapApiToRows(data) : null), [data])
   const filteredSignals = category ? (rows || []).filter((signal) => signal.confidence === category) : rows || []
 
   return (
     <div className="w-full overflow-auto">
-      {error && <div className="text-sm text-red-500 mb-2">Failed to load signals: {error}</div>}
+      {error && <div className="text-sm text-red-500 mb-2">Failed to load signals: {String(error)}</div>}
       <Table>
         <TableHeader>
           <TableRow>

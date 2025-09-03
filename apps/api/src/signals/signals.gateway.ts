@@ -18,10 +18,12 @@ export class SignalsGateway implements OnGatewayInit, OnModuleDestroy {
   afterInit() {
     if (this.sub) {
       this.sub.subscribe('signals:live').catch(() => {});
-      this.sub.on('message', (_channel: string, message: string) => {
+      this.sub.subscribe('prophecies:today').catch(() => {});
+      this.sub.on('message', (channel: string, message: string) => {
         try {
           const parsed = JSON.parse(message);
-          const payload = { type: 'signals:live', data: parsed };
+          const type = channel === 'prophecies:today' ? 'prophecies:today' : 'signals:live';
+          const payload = { type, data: parsed };
           const out = JSON.stringify(payload);
           this.server?.clients?.forEach((client: any) => {
             if (client.readyState === 1) client.send(out);

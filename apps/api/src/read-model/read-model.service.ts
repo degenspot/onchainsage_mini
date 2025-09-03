@@ -8,10 +8,14 @@ export class ReadModelService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getTopSignals(params: TopSignalsParams) {
-    const { limit } = params;
-    // Simple: order by latest `at` then by `score` desc; limit N
+    const { limit, window } = params;
+    const end = new Date();
+    const start = new Date(
+      end.getTime() - (window === '1h' ? 60 * 60_000 : window === '24h' ? 24 * 60 * 60_000 : 7 * 24 * 60 * 60_000),
+    );
     const signals = await this.prisma.signal.findMany({
-      orderBy: [{ at: 'desc' }, { score: 'desc' }],
+      where: { at: { gte: start, lte: end } },
+      orderBy: [{ score: 'desc' }, { at: 'desc' }],
       take: Math.min(limit, 50),
       include: { token: true },
     });
