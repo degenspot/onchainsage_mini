@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react"
 import { ArrowDown, ArrowUp, ArrowUpRight, CircleAlert, Zap } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,9 +19,11 @@ type SignalRow = {
   sentiment: number
   confidence: "high" | "emerging" | "risky"
   timestamp: string
+  chain: string
+  address: string
 }
 
-const mapApiToRows = (signals: Array<{ tokenId: string; address: string; symbol?: string; score: number; label: string; at: string }>): SignalRow[] => {
+const mapApiToRows = (signals: Array<{ tokenId: string; chain: string; address: string; symbol?: string; score: number; label: string; at: string }>): SignalRow[] => {
   return signals.map((s, idx) => ({
     id: `${s.tokenId}-${idx}`,
     token: s.symbol ?? s.address.slice(0, 6),
@@ -30,6 +33,8 @@ const mapApiToRows = (signals: Array<{ tokenId: string; address: string; symbol?
     sentiment: Math.min(100, Math.max(0, Math.round(50 + s.score * 10))),
     confidence: s.label === "HYPE_BUILDING" ? "high" : s.label === "WHALE_PLAY" ? "high" : s.label === "DEAD_ZONE" ? "emerging" : "risky",
     timestamp: s.at,
+    chain: s.chain,
+    address: s.address,
   }))
 }
 
@@ -38,6 +43,7 @@ type SignalTableProps = {
 }
 
 export function SignalTable({ category }: SignalTableProps) {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useTopSignals("24h", 10)
 
@@ -51,12 +57,12 @@ export function SignalTable({ category }: SignalTableProps) {
     }
   }, [queryClient])
 
-  const rows = useMemo(() => (data ? mapApiToRows(data) : null), [data])
+  const rows = useMemo(() => (data === undefined ? undefined : mapApiToRows(data)), [data])
   const filteredSignals = category ? (rows || []).filter((signal) => signal.confidence === category) : rows || []
 
   return (
     <div className="w-full overflow-auto">
-      {error && <div className="text-sm text-red-500 mb-2">Failed to load signals: {String(error)}</div>}
+      {error && <div className="text-sm text-red-500 mb-2">Failed to load prophecies: {String(error)}</div>}
       <Table>
         <TableHeader>
           <TableRow>
@@ -71,9 +77,17 @@ export function SignalTable({ category }: SignalTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows === null ? (
+          {isLoading ? (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">Loading…</TableCell>
+              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">
+                Loading…
+              </TableCell>
+            </TableRow>
+          ) : rows && rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">
+                No prophecies found.
+              </TableCell>
             </TableRow>
           ) : (
             filteredSignals.map((signal) => (
@@ -119,7 +133,11 @@ export function SignalTable({ category }: SignalTableProps) {
                   {new Date(signal.timestamp).toLocaleTimeString()}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Badge variant="outline" className="cursor-pointer hover:bg-primary hover:text-primary-foreground">
+                  <Badge 
+                    variant="outline" 
+                    className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                    onClick={() => router.push(`/dashboard/token/${signal.chain}/${signal.address}`)}
+                  >
                     View Details
                   </Badge>
                 </TableCell>
