@@ -1,0 +1,8 @@
+{
+  "name": "onchain-sage",
+  "private": "true",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Token {
+  id           String  @id
+  chain        String
+  address      String
+  symbol       String?
+  createdAt    DateTime @default(now())
+  marketSnaps  MarketSnapshot[]
+  socialSnaps  SocialSnapshot[]
+  signals      Signal[]
+  prophecies   Prophecy[]
+}
+
+model MarketSnapshot {
+  id         String   @id @default(cuid())
+  tokenId    String
+  volume1h   Float
+  volume24h  Float
+  liquidity  Float
+  price      Float
+  ageMin     Int
+  at         DateTime @default(now())
+  token      Token    @relation(fields: [tokenId], references: [id])
+  @@index([tokenId, at])
+}
+
+model SocialSnapshot {
+  id          String   @id @default(cuid())
+  tokenId     String
+  mentions1h  Int
+  mentions24h Int
+  slope       Float
+  at          DateTime @default(now())
+  token       Token    @relation(fields: [tokenId], references: [id])
+  @@index([tokenId, at])
+}
+
+model Signal {
+  id       String   @id @default(cuid())
+  tokenId  String
+  score    Float
+  label    String
+  reasons  Json
+  at       DateTime @default(now())
+  token    Token    @relation(fields: [tokenId], references: [id])
+  @@index([at, score])
+}
+
+model Prophecy {
+  id         String   @id @default(cuid())
+  tokenId    String
+  signalHash String
+  score      Float
+  rank       Int
+  txHash     String?
+  postedAt   DateTime @default(now())
+  token      Token    @relation(fields: [tokenId], references: [id])
+}
