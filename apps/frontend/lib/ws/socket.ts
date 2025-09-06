@@ -43,15 +43,39 @@ function handleSignalsLive(
 			.slice(0, 10);
 		queryClient.setQueryData(queryKey, nextData);
 	}
+	// The dashboard overview depends on both signals and prophecies.
+	// When a new live signal arrives we should invalidate the overview
+	// so its counts/metrics refresh. Also invalidate signals history
+	// queries (partial key ['signals','history']) so any chart windows
+	// or paginated history variants refetch with the latest data.
+	try {
+		queryClient.invalidateQueries({ queryKey: qk.dashboard.overview() });
+		queryClient.invalidateQueries({ queryKey: ["signals", "history"] });
+	} catch (err) {
+		// Non-fatal: allow the socket handler to continue even if invalidation fails
+		console.error("Failed to invalidate dashboard queries on signals:live", err);
+	}
 }
 
 function handlePropheciesToday(queryClient: QueryClient) {
+	// Invalidate today's prophecies (existing behavior)
 	queryClient.invalidateQueries({ queryKey: qk.prophecies.today() });
+
+	// The dashboard overview also depends on prophecy counts — invalidate it
+	// so overview cards update when new prophecies arrive.
+	// Additionally invalidate weekly prophecy variants so any weekly
+	// aggregates or charts refresh.
+	try {
+		queryClient.invalidateQueries({ queryKey: qk.dashboard.overview() });
+		queryClient.invalidateQueries({ queryKey: ["prophecies", "weekly"] });
+	} catch (err) {
+		console.error("Failed to invalidate dashboard queries on prophecies:today", err);
+	}
 }
 
 export class ApiSocket {
 	private socket: WebSocket | null = null;
-	private listeners = new Map<string, Set<Listener<any>>>();
+	private listeners = new Map<string, Set<Listener<unknown>>>();
 
 	connect() {
 		if (
@@ -64,7 +88,7 @@ export class ApiSocket {
 		this.socket = new WebSocket(`${WS_BASE_URL}`);
 		this.socket.onmessage = (ev) => {
 			try {
-				const data: WebSocketPayload = JSON.parse(ev.data);
+			const data = JSON.parse(ev.data) as WebSocketPayload;
 				const queryClient = getQueryClient();
 
 				if (queryClient && data.type) {
@@ -79,7 +103,7 @@ export class ApiSocket {
 				}
 
 				if (data.type) {
-					this.emit(data.type, data.payload);
+					this.emit(data.type, data.payload as unknown);
 				}
 			} catch (err) {
 				// Gracefully degrade
@@ -96,16 +120,16 @@ export class ApiSocket {
 
 	on<T>(event: string, fn: Listener<T>) {
 		if (!this.listeners.has(event)) this.listeners.set(event, new Set());
-		this.listeners.get(event)!.add(fn as Listener<any>);
+		this.listeners.get(event)!.add(fn as unknown as Listener<unknown>);
 		return () => this.off(event, fn);
 	}
 
 	off<T>(event: string, fn: Listener<T>) {
-		this.listeners.get(event)?.delete(fn as Listener<any>);
+		this.listeners.get(event)?.delete(fn as unknown as Listener<unknown>);
 	}
 
-	private emit(event: string, payload: any) {
-		this.listeners.get(event)?.forEach((fn) => fn(payload));
+	private emit(event: string, payload: unknown) {
+		this.listeners.get(event)?.forEach((fn) => (fn as Listener<unknown>)(payload));
 	}
 }
 

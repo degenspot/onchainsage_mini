@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import {
   Area,
   AreaChart,
@@ -15,32 +15,37 @@ import {
 } from "@/components/ui/chart"
 
 import { Button } from "@/components/ui/button"
+import { useSignalsHistory } from "@/lib/query/hooks"
+import type { ApiSignalHistoryPoint } from "@/lib/api/types"
+import { Skeleton } from "@/components/ui/skeleton"
 
-const priceData = [
-  { date: "Mar 15", BTC: 68500, ETH: 3800, SOL: 145 },
-  { date: "Mar 16", BTC: 67200, ETH: 3750, SOL: 142 },
-  { date: "Mar 17", BTC: 69800, ETH: 3900, SOL: 152 },
-  { date: "Mar 18", BTC: 71200, ETH: 4050, SOL: 158 },
-  { date: "Mar 19", BTC: 70500, ETH: 3980, SOL: 155 },
-  { date: "Mar 20", BTC: 72800, ETH: 4120, SOL: 162 },
-  { date: "Mar 21", BTC: 73500, ETH: 4200, SOL: 168 },
-]
-
-const volumeData = [
-  { date: "Mar 15", BTC: 32, ETH: 18, SOL: 12 },
-  { date: "Mar 16", BTC: 28, ETH: 16, SOL: 10 },
-  { date: "Mar 17", BTC: 35, ETH: 20, SOL: 14 },
-  { date: "Mar 18", BTC: 42, ETH: 24, SOL: 18 },
-  { date: "Mar 19", BTC: 38, ETH: 22, SOL: 15 },
-  { date: "Mar 20", BTC: 45, ETH: 26, SOL: 20 },
-  { date: "Mar 21", BTC: 48, ETH: 28, SOL: 22 },
-]
+type ChartPoint = Record<string, string | number>
 
 export function DashboardChart() {
-  const [chartType, setChartType] = useState<"price" | "volume">("price")
+  const [chartMetric, setChartMetric] = useState<'scores' | 'volume' | 'labels'>('scores')
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d">("7d")
 
-  const data = chartType === "price" ? priceData : volumeData
+  const { data, isLoading, error } = useSignalsHistory(timeRange)
+
+  const chartData = useMemo<ChartPoint[]>(() => {
+    if (!data) return [] as ChartPoint[];
+    // transform ApiSignalHistoryPoint[] into chart points
+    return data.map((p: ApiSignalHistoryPoint) => {
+      const point: ChartPoint = {
+        date: new Date(p.date).toLocaleDateString(),
+        score: Number((p.avgScore ?? 0).toFixed(4)),
+        total: p.totalSignals ?? 0,
+      };
+      // include label counts
+      if (p.labelCounts) {
+        for (const k of Object.keys(p.labelCounts)) {
+          point[k] = p.labelCounts[k] ?? 0;
+        }
+      }
+      return point;
+    });
+  }, [data]);
+
 
   /* Improve chart responsiveness */
   return (
@@ -48,20 +53,28 @@ export function DashboardChart() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button
-            variant={chartType === "price" ? "default" : "outline"}
+            variant={chartMetric === 'scores' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setChartType("price")}
+            onClick={() => setChartMetric('scores')}
             className="transition-all-200"
           >
-            Price
+            Signal Scores
           </Button>
           <Button
-            variant={chartType === "volume" ? "default" : "outline"}
+            variant={chartMetric === 'volume' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setChartType("volume")}
+            onClick={() => setChartMetric('volume')}
             className="transition-all-200"
           >
-            Volume
+            Signal Volume
+          </Button>
+          <Button
+            variant={chartMetric === 'labels' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setChartMetric('labels')}
+            className="transition-all-200"
+          >
+            Label Breakdown
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -93,9 +106,14 @@ export function DashboardChart() {
       </div>
 
       <div className="h-[250px] sm:h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          {chartType === "price" ? (
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        {isLoading ? (
+          <Skeleton className="h-[250px] sm:h-[300px] w-full" />
+        ) : error ? (
+          <div className="text-sm text-red-500">{String((error instanceof Error) ? error.message : error)}</div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {chartMetric === 'scores' ? (
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorBTC" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f7931a" stopOpacity={0.8} />
@@ -110,8 +128,8 @@ export function DashboardChart() {
                   <stop offset="95%" stopColor="#00ffbd" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
               <CartesianGrid strokeDasharray="3 3" />
               <Tooltip
                 contentStyle={{
@@ -123,55 +141,60 @@ export function DashboardChart() {
                 }}
               />
               <Legend wrapperStyle={{ paddingTop: 10 }} />
-              <Area
-                type="monotone"
-                dataKey="BTC"
-                stroke="#f7931a"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorBTC)"
-                activeDot={{ r: 6 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="ETH"
-                stroke="#627eea"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorETH)"
-                activeDot={{ r: 6 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="SOL"
-                stroke="#00ffbd"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorSOL)"
-                activeDot={{ r: 6 }}
-              />
-            </AreaChart>
-          ) : (
-            <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(0, 0, 0, 0.8)",
-                  border: "none",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                  color: "#fff",
-                }}
-              />
-              <Legend wrapperStyle={{ paddingTop: 10 }} />
-              <Bar dataKey="BTC" fill="#f7931a" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ETH" fill="#627eea" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="SOL" fill="#00ffbd" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
+                <CartesianGrid strokeDasharray="3 3" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    border: "none",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                    color: "#fff",
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: 10 }} />
+                <Area type="monotone" dataKey="score" stroke="#60a5fa" strokeWidth={2} fillOpacity={0.2} fill="#60a5fa" />
+              </AreaChart>
+            ) : chartMetric === 'volume' ? (
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    border: "none",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                    color: "#fff",
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: 10 }} />
+                <Bar dataKey="total" fill="#34d399" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : (
+              // labels stacked area
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    border: "none",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                    color: "#fff",
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: 10 }} />
+                <Area type="monotone" dataKey="HYPE_BUILDING" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                <Area type="monotone" dataKey="FAKE_PUMP" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
+                <Area type="monotone" dataKey="DEAD_ZONE" stackId="1" stroke="#6b7280" fill="#6b7280" fillOpacity={0.3} />
+                <Area type="monotone" dataKey="WHALE_PLAY" stackId="1" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.3} />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   )

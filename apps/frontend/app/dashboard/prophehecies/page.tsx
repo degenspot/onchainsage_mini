@@ -79,7 +79,7 @@ export default function PropheciesPage() {
           <CardHeader>
             <CardTitle>Error</CardTitle>
             <CardDescription>
-              There was a problem fetching today's prophecies.
+              There was a problem fetching today&apos;s prophecies.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -96,7 +96,7 @@ export default function PropheciesPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Today's Prophecies</CardTitle>
+  <CardTitle>Today&apos;s Prophecies</CardTitle>
         <CardDescription>
           Tokens our AI has identified with high potential today.
         </CardDescription>

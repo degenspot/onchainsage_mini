@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { ExternalLink, BotMessageSquare, Sparkles, AlertTriangle } from "lucide-react";
+import { BotMessageSquare, Sparkles, AlertTriangle } from "lucide-react";
 
 const getScoreBadgeClass = (score: number) => {
   if (score > 0.75) return "bg-green-500/20 text-green-500 border-green-500/30";

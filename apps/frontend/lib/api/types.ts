@@ -27,16 +27,44 @@ export type ApiProphecy = {
 	signalHash: string;
 	txHash?: string;
 	postedAt: string;
-	criteria?: Record<string, any>;
+	criteria?: Record<string, unknown>;
 	thesis?: string;
 	narrativeScore?: number;
 	criteriaMatched?: string[];
-	socialSignals?: Record<string, any>;
+	socialSignals?: Record<string, unknown>;
+
 };
 
 export type HealthResponse = {
 	ok: boolean;
 	db: "ok" | "error";
 };
+
+export type ApiDashboardOverview = {
+	totalProphecies: number;
+	highConfidence: number;
+	emergingTrends: number;
+	riskyProphecies: number;
+	lastUpdate: string;
+};
+
+export type ApiProphecyWeeklyCount = {
+	date: string;
+	total: number;
+	highConfidence: number;
+	emergingTrends: number;
+	risky: number;
+};
+
+export type ApiPropheciesWeekly = ApiProphecyWeeklyCount[];
+
+export type ApiSignalHistoryPoint = {
+	date: string;
+	avgScore: number;
+	totalSignals: number;
+	labelCounts: Record<string, number>;
+};
+
+export type ApiSignalsHistory = ApiSignalHistoryPoint[];
 
 

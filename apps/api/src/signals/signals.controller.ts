@@ -33,4 +33,10 @@ export class SignalsController {
   ) {
     return this.readModel.getTokenSignals(chain, address, limit ?? 20);
   }
+
+  @Get('history')
+  async getHistory(@Query('window') window = '7d', @Query('limit', new ParseIntPipe({ optional: true })) limit?: number) {
+    const w = (['7d', '30d', '90d'] as const).includes(window as any) ? (window as any) : '7d';
+    return this.readModel.getSignalHistory({ window: w, limit });
+  }
 }

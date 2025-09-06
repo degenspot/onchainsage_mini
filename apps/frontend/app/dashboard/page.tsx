@@ -15,31 +15,74 @@ import {
 import { DashboardChart } from "@/components/dashboard-chart"
 import { SignalTable } from "@/components/signal-table"
 import { TrendingTokens } from "@/components/trending-tokens"
+import { useDashboardOverview } from "@/lib/query/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
+  const { data, isLoading, error } = useDashboardOverview();
+  const errMsg = error ? (error instanceof Error ? error.message : String(error)) : null;
+
   return (
     <div className="p-4 md:p-6">
       <div className="grid gap-4 md:gap-6 w-full">
         {/* Overview Cards */}
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-          {[
-            { title: "Total Prophecies", value: "142", change: "+22%" },
-            { title: "High Confidence", value: "36", change: "+12%" },
-            { title: "Emerging Trends", value: "89", change: "+18%" },
-            { title: "Risky Prophecies", value: "17", change: "-5%" },
-          ].map((card, index) => (
-            <Card key={index}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{card.value}</div>
-                <p className={`text-xs ${card.change.startsWith("+") ? "text-green-500" : "text-red-500"}`}>
-                  {card.change} from last month
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      <Skeleton className="h-4 w-24" />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      <Skeleton className="h-8 w-20" />
+                    </div>
+                    <div className={`text-xs text-gray-500`}>
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            : error || !data
+            ? (
+                <>
+                  <div className="text-sm text-red-500 mb-2">{errMsg ?? 'No data'}</div>
+                  {[
+                    { title: 'Total Prophecies', value: '--', change: 'N/A' },
+                    { title: 'High Confidence', value: '--', change: 'N/A' },
+                    { title: 'Emerging Trends', value: '--', change: 'N/A' },
+                    { title: 'Risky Prophecies', value: '--', change: 'N/A' },
+                  ].map((card, idx) => (
+                    <Card key={idx}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{card.value}</div>
+                        <p className={`text-xs text-gray-500`}>{card.change}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )
+            : [
+                { title: 'Total Prophecies', value: String(data.totalProphecies), change: 'N/A' },
+                { title: 'High Confidence', value: String(data.highConfidence), change: 'N/A' },
+                { title: 'Emerging Trends', value: String(data.emergingTrends), change: 'N/A' },
+                { title: 'Risky Prophecies', value: String(data.riskyProphecies), change: 'N/A' },
+              ].map((card, index) => (
+                <Card key={index}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{card.value}</div>
+                    <p className={`text-xs text-gray-500`}>{card.change} from last month</p>
+                  </CardContent>
+                </Card>
+              ))}
         </div>
 
         {/* Charts and Tables */}

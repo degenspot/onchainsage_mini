@@ -55,11 +55,11 @@ export default function PropheciesPage() {
           <CardHeader>
             <CardTitle>Error</CardTitle>
             <CardDescription>
-              There was a problem fetching today's prophecies.
+              There was a problem fetching today&apos;s prophecies.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-red-500">{error?.message}</p>
+            <p className="text-red-500">{String((error instanceof Error ? error.message : error) ?? 'Error')}</p>
             <Button onClick={() => refetch()} className="mt-4 w-full">
               Try Again
             </Button>
@@ -73,7 +73,7 @@ export default function PropheciesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Today's Prophecies</h1>
+          <h1 className="text-2xl font-bold">Today&apos;s Prophecies</h1>
           <p className="text-muted-foreground">
             Tokens our AI has identified with high potential today.
           </p>
@@ -104,7 +104,7 @@ export default function PropheciesPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <ToggleGroup type="single" value={view} onValueChange={(v) => setView(v as any)} size="sm">
+          <ToggleGroup type="single" value={view} onValueChange={(v: string | null) => setView((v as 'card' | 'table') ?? 'card')} size="sm">
             <ToggleGroupItem value="card" aria-label="Card view">
               <LayoutGrid className="h-4 w-4" />
             </ToggleGroupItem>

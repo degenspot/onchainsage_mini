@@ -11,14 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useTokenSignals } from "@/lib/query/hooks"
 import { SignalChart } from "@/components/signal-chart"
 
-type TokenDetailsPageProps = {
-  params: {
-    chain: string
-    address: string
-  }
-}
-
-export default function TokenDetailsPage({ params }: TokenDetailsPageProps) {
+export default function TokenDetailsPage({ params }: { params: { chain: string; address: string } }) {
   const { chain, address } = params
   const router = useRouter()
   const { data: signals, isLoading, error, refetch } = useTokenSignals(chain, address)
