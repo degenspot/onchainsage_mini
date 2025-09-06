@@ -47,7 +47,7 @@ model Signal {
   id       String   @id @default(cuid())
   tokenId  String
   score    Float
-  label    String
+  label    SignalLabel
   reasons  Json
   at       DateTime @default(now())
   token    Token    @relation(fields: [tokenId], references: [id])
@@ -55,12 +55,26 @@ model Signal {
 }
 
 model Prophecy {
-  id         String   @id @default(cuid())
-  tokenId    String
-  signalHash String
-  score      Float
-  rank       Int
-  txHash     String?
-  postedAt   DateTime @default(now())
-  token      Token    @relation(fields: [tokenId], references: [id])
+  id              String   @id @default(cuid())
+  tokenId         String
+  signalHash      String
+  score           Float
+  rank            Int
+  txHash          String?
+  postedAt        DateTime @default(now())
+  token           Token    @relation(fields: [tokenId], references: [id])
+  criteria        Json
+  thesis          String?
+  narrativeScore  Float?
+  criteriaMatched Json?
+  socialSignals   Json?
+  @@unique([signalHash])
+}
+
+enum SignalLabel {
+  HYPE_BUILDING
+  WHALE_PLAY
+  FAKE_PUMP
+  DEAD_ZONE
+  SOCIAL_SPIKE
 }

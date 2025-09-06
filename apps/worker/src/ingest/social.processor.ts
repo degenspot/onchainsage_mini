@@ -1,12 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { SOCIAL_QUEUE } from '../queues/bull.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { SocialProvider, MockSocialProvider, HttpSocialProvider } from './social.provider';
 
 @Injectable()
 export class SocialProcessor {
-  constructor(private readonly prisma: PrismaService) {}
+  private provider: SocialProvider;
+  constructor(private readonly prisma: PrismaService) {
+    // Select provider by env var
+    const p = process.env.SOCIAL_PROVIDER || 'mock';
+    if (p === 'http') this.provider = new HttpSocialProvider();
+    else this.provider = new MockSocialProvider();
+  }
 
   onModuleInit() {
     const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -16,14 +23,8 @@ export class SocialProcessor {
       SOCIAL_QUEUE,
       async (job) => {
         const { tokenId } = job.data as { tokenId: string };
-        // Stub: deterministic counts based on tokenId hash
-        const h = [...tokenId].reduce((a, c) => a + c.charCodeAt(0), 0);
-        const mentions1h = (h % 120) + 10;
-        const mentions24h = mentions1h * 10 + (h % 50);
-        const slope = ((h % 20) - 10) / 10;
-        await this.prisma.socialSnapshot.create({
-          data: { tokenId, mentions1h, mentions24h, slope, at: new Date() },
-        });
+        const snap = await this.provider.fetch(tokenId);
+        await this.prisma.socialSnapshot.create({ data: { tokenId: snap.tokenId, mentions1h: snap.mentions1h, mentions24h: snap.mentions24h, slope: snap.slope, at: snap.at ?? new Date() } });
         return { tokenId };
       },
       { connection },

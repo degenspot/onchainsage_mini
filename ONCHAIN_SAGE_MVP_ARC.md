@@ -327,3 +327,11 @@ LUNARCRUSH_KEY=...   # or TWITTER_SCRAPER=true
 RPC_BASE=https://base-mainnet.g.alchemy.com/v2/...
 POSTER_PRIVATE_KEY=0x...
 TELEGRAM_BOT_TOKEN=...
+````markdown
+
+## Project Status (2025-09-04)
+
+- MVP components in place: ingestion/worker, read-model (SQLite/Prisma), API with REST+WS, frontend scaffolding.
+- A `db:sync` script was added to ensure migrations and client generation are applied reliably in dev.
+
+Direction: stabilize local dev environment (db sync + optional docker compose), add CI that runs `db:sync` then tests, and prepare a Postgres migration plan for production readiness.

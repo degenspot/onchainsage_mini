@@ -1,20 +1,25 @@
 "use client";
 
+import { QueryClient } from "@tanstack/react-query";
+import { getQueryClient } from "../../providers/query-provider";
+import { ApiProphecy, ApiSignalTop } from "../api/types";
+import { qk } from "../query/keys";
+
 type Listener<T> = (payload: T) => void;
 
-export type LiveSignalPayload = {
-	tokenId: string;
-	score: number;
-	label: string;
-	at: string;
-};
+export type LiveSignalPayload = ApiSignalTop;
 
-export type PropheciesTodayPayload = unknown[];
+export type PropheciesTodayPayload = ApiProphecy[];
+
+type WebSocketPayload =
+	| { type: "signals:live"; payload: LiveSignalPayload }
+	| { type: "prophecies:today"; payload: PropheciesTodayPayload };
 
 const WS_BASE_URL = (() => {
 	if (typeof window === "undefined") return "";
 	try {
-		const httpUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+		const httpUrl =
+			process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 		const u = new URL(httpUrl);
 		u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
 		return `${u.protocol}//${u.host}`;
@@ -23,26 +28,69 @@ const WS_BASE_URL = (() => {
 	}
 })();
 
+function handleSignalsLive(
+	queryClient: QueryClient,
+	payload: LiveSignalPayload,
+) {
+	const queryKey = qk.signals.top("24h", 10);
+	const previousData = queryClient.getQueryData<ApiSignalTop[]>(queryKey);
+	if (previousData) {
+		const nextData = [
+			payload,
+			...previousData.filter((s) => s.tokenId !== payload.tokenId),
+		]
+			.sort((a, b) => b.score - a.score)
+			.slice(0, 10);
+		queryClient.setQueryData(queryKey, nextData);
+	}
+}
+
+function handlePropheciesToday(queryClient: QueryClient) {
+	queryClient.invalidateQueries({ queryKey: qk.prophecies.today() });
+}
+
 export class ApiSocket {
 	private socket: WebSocket | null = null;
 	private listeners = new Map<string, Set<Listener<any>>>();
 
 	connect() {
-		if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+		if (
+			this.socket &&
+			(this.socket.readyState === WebSocket.OPEN ||
+				this.socket.readyState === WebSocket.CONNECTING)
+		) {
 			return;
 		}
 		this.socket = new WebSocket(`${WS_BASE_URL}`);
 		this.socket.onmessage = (ev) => {
 			try {
-				const data = JSON.parse(ev.data);
-				const { type, payload } = data || {};
-				this.emit(type, payload);
-			} catch {
-				// ignore
+				const data: WebSocketPayload = JSON.parse(ev.data);
+				const queryClient = getQueryClient();
+
+				if (queryClient && data.type) {
+					switch (data.type) {
+						case "signals:live":
+							handleSignalsLive(queryClient, data.payload);
+							break;
+						case "prophecies:today":
+							handlePropheciesToday(queryClient);
+							break;
+					}
+				}
+
+				if (data.type) {
+					this.emit(data.type, data.payload);
+				}
+			} catch (err) {
+				// Gracefully degrade
+				console.error("Failed to handle WebSocket message:", err);
 			}
 		};
 		this.socket.onclose = () => {
 			setTimeout(() => this.connect(), 1500);
+		};
+		this.socket.onerror = (err) => {
+			console.error("WebSocket error:", err);
 		};
 	}
 

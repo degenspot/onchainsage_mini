@@ -65,6 +65,11 @@ export class ReadModelService {
       signalHash: p.signalHash,
       txHash: p.txHash ?? undefined,
       postedAt: p.postedAt.toISOString(),
+      criteria: p.criteria as any,
+      thesis: p.thesis ?? undefined,
+      narrativeScore: p.narrativeScore,
+      criteriaMatched: p.criteriaMatched as any,
+      socialSignals: p.socialSignals as any,
     }));
   }
 }

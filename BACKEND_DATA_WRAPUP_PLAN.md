@@ -153,4 +153,11 @@ Day 7: Hardening, envs, docs, small E2E sanity run.
 - Add a seed script to insert a few `Token` and snapshot rows; verify API/WS end-to-end.
 - For processors, unit-test mapping from connector output to Prisma models.
 
+## Status Snapshot (2025-09-04)
+
+- Core read-model schema and migrations present under `apps/api/prisma`.
+- `db:sync` helper added to `apps/api` for smoother local sync: `prisma migrate deploy && prisma generate && npm run prisma:seed`.
+
+Direction: finish Worker -> Redis publishing stability, add end-to-end test that seeds DB, runs worker, and verifies a live WS message via API.
+
 

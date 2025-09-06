@@ -27,6 +27,11 @@ export type ApiProphecy = {
 	signalHash: string;
 	txHash?: string;
 	postedAt: string;
+	criteria?: Record<string, any>;
+	thesis?: string;
+	narrativeScore?: number;
+	criteriaMatched?: string[];
+	socialSignals?: Record<string, any>;
 };
 
 export type HealthResponse = {

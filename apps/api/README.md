@@ -135,3 +135,11 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Current Status (2025-09-04)
+
+- DB schema and migrations are in place; `prisma generate` and `prisma migrate` are used for schema management.
+- A convenience script `npm run db:sync` has been added to apply migrations non-interactively, regenerate the client, and run the seed.
+- API serves REST endpoints and a WebSocket gateway; Redis pub/sub is optional in dev but recommended for full live updates.
+
+Direction: stabilize developer DX by ensuring migrations + client are in sync at startup and add CI checks to run `db:sync` before tests.

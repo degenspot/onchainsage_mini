@@ -5,14 +5,19 @@ import { MARKET_QUEUE, SIGNAL_QUEUE_TOKEN, SOCIAL_QUEUE_TOKEN } from '../queues/
 import { PrismaService } from '../prisma/prisma.service';
 import { fetchPairsByQuery } from '../connectors/dexscreener';
 import { Queue } from 'bullmq';
+import { RiskAnalyzer } from '@onchainsage/connectors/risk/risk-analyzer';
 
 @Injectable()
 export class MarketProcessor {
+  private riskAnalyzer: RiskAnalyzer;
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(SIGNAL_QUEUE_TOKEN) private readonly signalQueue: Queue,
     @Inject(SOCIAL_QUEUE_TOKEN) private readonly socialQueue: Queue,
-  ) {}
+  ) {
+    this.riskAnalyzer = new RiskAnalyzer();
+  }
 
   onModuleInit() {
     const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -40,6 +45,10 @@ export class MarketProcessor {
               ageMin: s.age_minutes,
             },
           });
+
+          // Perform risk analysis
+          const riskFlags = await this.riskAnalyzer.analyze(s.address, s.chainId);
+
           // enqueue social job to update mentions/slope
           await this.socialQueue.add('social-stub', { tokenId });
           // enqueue a scoring job using market + latest social (social processor runs in parallel)
@@ -53,7 +62,7 @@ export class MarketProcessor {
               volume24h: s.volume24h,
               liquidity: s.liquidity_usd,
               ageMin: s.age_minutes,
-              riskFlags: [],
+              riskFlags: riskFlags as any,
             },
           });
         }

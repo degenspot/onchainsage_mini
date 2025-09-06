@@ -154,4 +154,13 @@ export const qk = {
 4) Add prophecies list with `usePropheciesToday` + WS invalidation.
 5) Polish: error states, loading, empty states.
 
+---
+
+## Status Snapshot (2025-09-04)
+
+- Frontend (Next.js) is present and can run independently; it expects API at `NEXT_PUBLIC_API_URL` (default `http://localhost:3001`).
+- WebSocket support in API is functional; enabling `REDIS_URL` improves live updates.
+
+Direction: focus on polishing components and hooking live WS events to UI charts; add local dev docker compose to run API + Worker + Redis for integrated testing.
+
 

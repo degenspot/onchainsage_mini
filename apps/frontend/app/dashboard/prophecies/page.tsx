@@ -8,15 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,23 +17,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, ListFilter } from "lucide-react";
+import { ListFilter, LayoutGrid, Rows } from "lucide-react";
 import { useState } from "react";
 import { ApiProphecy } from "@/lib/api/types";
-import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type SortKey = "rank" | "score" | "postedAt";
-
-const getScoreBadgeClass = (score: number) => {
-  if (score > 0.75) {
-    return "bg-green-500/20 text-green-500";
-  }
-  if (score > 0.5) {
-    return "bg-yellow-500/20 text-yellow-500";
-  }
-  return "bg-red-500/20 text-red-500";
-};
+import { ProphecyCard } from "@/components/prophecy/prophecy-card";
+import { ProphecyTable } from "@/components/prophecy/prophecy-table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export default function PropheciesPage() {
   const {
@@ -53,9 +34,8 @@ export default function PropheciesPage() {
     refetch,
   } = usePropheciesToday();
 
-  const [sortKey, setSortKey] = useState<SortKey>("rank");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [chainFilter, setChainFilter] = useState<string>("all");
+  const [view, setView] = useState<"card" | "table">("card");
 
   const chains = prophecies
     ? ["all", ...Array.from(new Set(prophecies.map((p) => p.chain)))]
@@ -66,27 +46,7 @@ export default function PropheciesPage() {
       (p) => chainFilter === "all" || p.chain === chainFilter
     ) || [];
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder("asc");
-    }
-  };
-
-  const sortedProphecies = [...filteredProphecies].sort((a, b) => {
-    const aValue = a[sortKey];
-    const bValue = b[sortKey];
-
-    if (aValue < bValue) {
-      return sortOrder === "asc" ? -1 : 1;
-    }
-    if (aValue > bValue) {
-      return sortOrder === "asc" ? 1 : -1;
-    }
-    return 0;
-  });
+  // Prophecies are already sorted by rank from the API.
 
   if (isError) {
     return (
@@ -110,15 +70,15 @@ export default function PropheciesPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Today's Prophecies</CardTitle>
-            <CardDescription>
-              Tokens our AI has identified with high potential today.
-            </CardDescription>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Today's Prophecies</h1>
+          <p className="text-muted-foreground">
+            Tokens our AI has identified with high potential today.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 gap-1">
@@ -144,108 +104,38 @@ export default function PropheciesPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <ToggleGroup type="single" value={view} onValueChange={(v) => setView(v as any)} size="sm">
+            <ToggleGroupItem value="card" aria-label="Card view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view">
+              <Rows className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead onClick={() => handleSort("rank")}>
-                <Button variant="ghost" className="px-0">
-                  Rank
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead>Token</TableHead>
-              <TableHead>Chain</TableHead>
-              <TableHead onClick={() => handleSort("score")}>
-                <Button variant="ghost" className="px-0">
-                  Score
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead onClick={() => handleSort("postedAt")}>
-                <Button variant="ghost" className="px-0">
-                  Posted Time
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 10 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-10" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : sortedProphecies.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">
-                  No prophecies found for today.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sortedProphecies.map((prophecy: ApiProphecy) => (
-                <TableRow key={prophecy.id}>
-                  <TableCell>
-                    <Badge variant="outline">{prophecy.rank}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/token/${prophecy.chain.toLowerCase()}/${
-                        prophecy.address
-                      }`}
-                      className="hover:underline"
-                    >
-                      <div className="font-medium">
-                        {prophecy.symbol ??
-                          `${prophecy.address.slice(
-                            0,
-                            6
-                          )}...${prophecy.address.slice(-4)}`}
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {prophecy.address}
-                      </div>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{prophecy.chain}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getScoreBadgeClass(prophecy.score)}>
-                      {prophecy.score.toFixed(4)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      {new Date(prophecy.postedAt).toLocaleDateString()}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(prophecy.postedAt).toLocaleTimeString()}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+      </div>
+      
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-64 w-full" />
+            ))}
+        </div>
+      ) : filteredProphecies.length === 0 ? (
+        <Card>
+            <CardContent className="flex items-center justify-center h-48">
+                <p>No prophecies found for today.</p>
+            </CardContent>
+        </Card>
+      ) : view === 'card' ? (
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+          {filteredProphecies.map((prophecy: ApiProphecy) => (
+            <ProphecyCard key={prophecy.signalHash} prophecy={prophecy} />
+          ))}
+        </div>
+      ) : (
+        <ProphecyTable prophecies={filteredProphecies} />
+      )}
+    </div>
   );
 }

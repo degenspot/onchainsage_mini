@@ -1,4 +1,4 @@
-export type ScoreLabel = 'HYPE_BUILDING' | 'FAKE_PUMP' | 'DEAD_ZONE' | 'WHALE_PLAY';
+export type ScoreLabel = 'HYPE_BUILDING' | 'FAKE_PUMP' | 'DEAD_ZONE' | 'WHALE_PLAY' | 'SOCIAL_SPIKE';
 
 export interface ScoreInput {
   mentions1h: number;

@@ -17,17 +17,22 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "run-prophecy-once": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/run-prophecy-once.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.0.0",
     "@prisma/client": "^6.15.0",
+    "axios": "^1.4.0",
     "bullmq": "^5.12.1",
     "ioredis": "^5.7.0",
+    "openai": "^4.20.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sentiment": "^5.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

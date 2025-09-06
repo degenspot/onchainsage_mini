@@ -1,0 +1,16 @@
+{
+  "name": "@onchainsage/connectors",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

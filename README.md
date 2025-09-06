@@ -85,4 +85,12 @@ wscat -c ws://localhost:3001
 - No WS updates: ensure `REDIS_URL` is set for both API and worker or rely on API mock fallback.
 - See data: run `npx prisma studio` in `apps/api` to view tables.
 
+## Current Status (2025-09-04)
+
+- The monorepo contains `apps/api` (NestJS), `apps/worker` (NestJS worker), `apps/frontend` (Next.js), and shared `packages/*` TS libs.
+- DB schema and migrations (Prisma) were updated; run `cd apps/api && npm run db:sync` to apply migrations, regenerate client, and seed local DB.
+- For full realtime behaviour set `REDIS_URL` in both API and Worker environments.
+
+Direction: prioritize developer DX (db sync script added), add CI checks to run `db:sync` before tests, and consider migrating from SQLite to Postgres for production.
+
 
