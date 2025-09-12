@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const criteriaPath = path.resolve(process.cwd(), '../../packages/scoring/criteria-engine.js');
 const narrativePath = path.resolve(process.cwd(), '../../packages/narrative/narrative-analyzer.js');
-const aiPath = path.resolve(process.cwd(), '../../packages/ai/ai-provider.js');
+const aiPath = path.resolve(process.cwd(), '../../packages/ai/dist/ai-provider-factory.js');
 const { CriteriaEngine } = require(criteriaPath);
 const { NarrativeAnalyzer } = require(narrativePath);
 const { getAIProvider } = require(aiPath);
@@ -40,7 +40,7 @@ async function runOnce() {
       if (!criteriaResult.passed) continue;
 
       const narrativeResult = narrativeAnalyzer.analyze({ mentions24h: socialSnap.mentions24h, slope: socialSnap.slope }, { symbol: signal.token.symbol });
-      const thesis = await aiProvider.generateThesis({ symbol: signal.token.symbol, price: marketSnap.price, liquidity: marketSnap.liquidity, volume24h: marketSnap.volume24h }, criteriaResult.matched, narrativeResult);
+      const thesisResult = await aiProvider.generateThesis({ symbol: signal.token.symbol, price: marketSnap.price, liquidity: marketSnap.liquidity, volume24h: marketSnap.volume24h }, criteriaResult.matched, narrativeResult);
 
       const payload = { tokenId: signal.tokenId, score: signal.score, rank: created.length + 1 };
       const signalHash = simpleHash(JSON.stringify(payload));
@@ -53,7 +53,9 @@ async function runOnce() {
         score: signal.score,
         rank: created.length + 1,
         criteria: criteriaResult as any,
-        thesis,
+        thesis: thesisResult.thesis,
+        thesisProvider: thesisResult.provider,
+        thesisConfidence: thesisResult.confidence,
         narrativeScore: (narrativeResult as any).coherence ?? 0,
         criteriaMatched: criteriaResult.matched as any,
         socialSignals: narrativeResult as any,

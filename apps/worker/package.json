@@ -32,7 +32,9 @@
     "openai": "^4.20.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sentiment": "^5.0.2"
+    "sentiment": "^5.0.2",
+    "@onchainsage/ai": "file:../../packages/ai",
+    "@onchainsage/connectors": "file:../../packages/connectors"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

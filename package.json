@@ -4,5 +4,24 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "dev:full": "concurrently \"npm run --workspace=api dev\" \"npm run --workspace=worker start:dev\" \"npm run --workspace=frontend dev\"",
+    "setup:env": "cp apps/worker/.env.example apps/worker/.env && echo 'Please fill in API keys in apps/worker/.env file'",
+    "db:migrate": "npm run --workspace=api prisma migrate deploy",
+    "db:reset": "npm run --workspace=api prisma migrate reset --force",
+    "db:seed": "npm run --workspace=api prisma db seed",
+    "test:pipeline": "ts-node scripts/test-pipeline.ts",
+    "validate:env": "ts-node scripts/validate-environment.ts",
+    "monitor:pipeline": "ts-node scripts/monitor-pipeline.ts",
+    "test:live": "DEX_LIVE_TEST=1 TWITTER_LIVE_TEST=1 HUGGINGFACE_LIVE_TEST=1 npm run test:pipeline",
+    "test:components": "npm run --workspace=worker test && npm run --workspace=ai test && npm run --workspace=connectors test"
+  },
+  "dependencies": {
+    "@the-convocation/twitter-scraper": "^0.18.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "ts-node": "^10.9.1"
+  }
 }

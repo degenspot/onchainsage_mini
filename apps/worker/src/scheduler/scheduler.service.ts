@@ -30,8 +30,28 @@ export class SchedulerService {
 
     // enqueue a simple market query every minute to build snapshots
     setInterval(async () => {
-      await this.marketQueue.add('search', { query: 'base' });
-    }, 60_000);
+      try {
+        await this.marketQueue.add('search', { query: 'base' });
+      } catch (e) {
+        console.error('[scheduler] failed to enqueue search job', String(e));
+      }
+    }, Number(process.env.SEARCH_JOB_FREQUENCY_MS || '60000'));
+
+    // enqueue trending discovery jobs on configurable interval (default 2 minutes)
+    setInterval(async () => {
+      try {
+        const enabled = process.env.ENABLE_TRENDING !== '0';
+        if (!enabled) return;
+        const freq = process.env.TRENDING_TIMEFRAME || '24h';
+        await this.marketQueue.add(
+          'trending',
+          { kind: 'trending', timeframe: freq },
+          { jobId: `trending:${freq}`, removeOnComplete: true, removeOnFail: { count: 100 } },
+        );
+      } catch (e) {
+        console.error('[scheduler] failed to enqueue trending job', String(e));
+      }
+    }, Number(process.env.TRENDING_JOB_FREQUENCY_MS || '120000'));
   }
 }
 

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import { TwitterScraper, TweetData } from '@onchainsage/connectors/social';
 
-export type SocialSnapshotLike = { tokenId: string; mentions1h: number; mentions24h: number; slope: number; at?: Date };
+export type SocialSnapshotLike = { tokenId: string; mentions1h: number; mentions24h: number; slope: number; at?: Date; tweets?: TweetData[] };
 
 export interface SocialProvider {
   fetch(tokenId: string): Promise<SocialSnapshotLike>;
@@ -33,4 +34,51 @@ export class HttpSocialProvider implements SocialProvider {
     // Expecting { mentions1h, mentions24h, slope }
     return { tokenId, mentions1h: data.mentions1h ?? 0, mentions24h: data.mentions24h ?? 0, slope: data.slope ?? 0, at: new Date() };
   }
+}
+
+@Injectable()
+export class TwitterSocialProvider implements SocialProvider {
+  private readonly logger = new Logger('TwitterSocialProvider');
+  private readonly scraper: TwitterScraper;
+
+  constructor() {
+    this.scraper = new TwitterScraper();
+  }
+  // tokenId expected format chain:address; extract symbol heuristically from Token table later
+  async fetch(tokenId: string) {
+    // derive a simple fallback symbol from tokenId and delegate to fetchBySymbol
+    const parts = tokenId.split(':');
+    const symbol = parts[0] || 'TOKEN';
+    return this.fetchBySymbol(tokenId, symbol);
+  }
+
+  async fetchBySymbol(tokenId: string, symbol: string): Promise<SocialSnapshotLike> {
+    try {
+      const s = `$${String(symbol).toUpperCase()}`;
+      const tweets = await this.scraper.searchTweetsBySymbol(s, { timeframe: '24h', maxResults: 100 });
+
+      const now = Date.now();
+      const oneHourAgo = now - 60 * 60 * 1000;
+      const dayAgo = now - 24 * 60 * 60 * 1000;
+      let mentions1h = 0;
+      let mentions24h = 0;
+      for (const t of tweets) {
+        const ts = Date.parse(t.createdAt);
+        if (!Number.isFinite(ts)) continue;
+        if (ts >= dayAgo) {
+          mentions24h++;
+          if (ts >= oneHourAgo) mentions1h++;
+        }
+      }
+      const slope = mentions24h ? ((mentions1h * 24 - mentions24h) / mentions24h) : 0;
+      return { tokenId, mentions1h, mentions24h, slope, at: new Date(), tweets };
+    } catch (e) {
+      this.logger.warn('Twitter fetch failed', String(e));
+      return { tokenId, mentions1h: 0, mentions24h: 0, slope: 0, at: new Date(), tweets: [] };
+    }
+  }
+}
+
+export function providerForEnv(): string {
+  return (process.env.SOCIAL_PROVIDER || 'mock').toLowerCase();
 }

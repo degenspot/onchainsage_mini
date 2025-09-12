@@ -96,3 +96,99 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## DexScreener trending discovery (custom)
+
+This worker contains a custom trending discovery pipeline for DexScreener since the API does not provide a public "trending" endpoint. Key points:
+
+- Multi-strategy discovery: token profiles endpoint + targeted search terms.
+- Trending algorithm ranks pairs by volume growth, liquidity, age bonus, and activity.
+- Rate limiting: a token-bucket limiter is used with default 300 req/min (configurable via `DEXSCREENER_RATE_LIMIT`).
+- Job types: `search` (backwards compatible) and `trending`.
+
+Environment variables (new):
+
+- `DEXSCREENER_RATE_LIMIT` (default 300) - requests per minute to DexScreener.
+- `DEXSCREENER_RETRY_ATTEMPTS` (default 2) - retry attempts for 5xx/timeouts.
+- `DEXSCREENER_TIMEOUT_MS` (default 10000) - request timeout in ms.
+- `TRENDING_JOB_FREQUENCY_MS` (default 120000) - how often to enqueue trending jobs.
+- `TRENDING_TIMEFRAME` (default '24h') - timeframe passed to trending discovery.
+- `ENABLE_TRENDING` (default '1') - disable trending scheduler by setting to '0'.
+- `DEX_LIVE_TEST` - enable live integration tests against the real API.
+
+## Sentiment analysis (Hugging Face)
+
+This worker integrates tweet-level sentiment analysis using the Hugging Face Inference API (default model: `distilbert-base-uncased-finetuned-sst-2-english`). Tweets scraped by the Twitter provider are analyzed in batches and sentiment is stored on both `SocialSnapshot` and individual `Tweet` records.
+
+Environment variables:
+
+- `HUGGINGFACE_API_KEY` (required for sentiment) - your Hugging Face Inference API key
+- `HUGGINGFACE_RATE_LIMIT` (default: 1000) - requests per minute for the HF client
+- `HUGGINGFACE_REQUEST_TIMEOUT` (default: 10000) - per-request timeout in ms
+- `HUGGINGFACE_MODEL` (default: `distilbert-base-uncased-finetuned-sst-2-english`) - model to use
+- `HUGGINGFACE_BATCH_SIZE` (default: 32) - batch size for inference requests
+- `HUGGINGFACE_LIVE_TEST` - enable live API tests when present
+
+Behavior:
+
+- Tweets shorter than 10 characters are skipped for sentiment analysis.
+- Sentiment analysis is rate-limited and retried with exponential backoff on transient failures.
+- Aggregated sentiment fields are stored on `SocialSnapshot`: `sentimentScore`, `positiveRatio`, `negativeRatio`, `sentimentAnalyzed`.
+- Individual tweets get `sentimentLabel`, `sentimentScore`, and `sentimentAnalyzedAt` when analyzed.
+
+
+Testing
+
+- Unit tests for the connector include mocked responses and rate-limiter tests.
+- Integration tests can be enabled by setting `DEX_LIVE_TEST=1` and running the test suite.
+
+If you change behavior, update the scheduler and processor intervals accordingly.
+
+## AI Provider System
+
+This worker includes an advanced AI Provider system for generating investment theses for prophecies. It supports multiple AI backends and provides a clear upgrade path from a simple rule-based system to sophisticated AI models.
+
+### Architecture
+
+The system is designed around an `AIProviderFactory` that dynamically selects an AI provider based on environment configuration. It supports graceful fallback to a `RuleBasedProvider` if a configured AI provider fails, ensuring high availability.
+
+Supported providers:
+- **Rule-Based**: A reliable, fast, and cost-effective default provider.
+- **Hugging Face**: Utilizes the Hugging Face Inference API for advanced models.
+- **AimlAPI**: Integrates with AimlAPI for access to powerful language models.
+- **OpenAI**: Uses the OpenAI API for state-of-the-art thesis generation.
+
+### Configuration
+
+The AI provider is configured via environment variables.
+
+**Core Configuration:**
+- `AI_PROVIDER`: (default: 'rule-based') - Selects the provider. Options: `rule-based`, `huggingface`, `aimlapi`, `openai`.
+- `AI_FALLBACK_ENABLED`: (default: true) - Enables fallback to the rule-based provider on failure.
+- `AI_HEALTH_CHECK_INTERVAL`: (default: 300000ms) - Interval for checking the health of AI providers.
+
+**Provider-Specific Configuration:**
+
+- **Hugging Face:**
+  - `HUGGINGFACE_API_KEY`: Your Hugging Face API key.
+  - `HUGGINGFACE_MODEL`: (default: `meta-llama/Meta-Llama-3.1-8B-Instruct`) - The model to use.
+  - `HUGGINGFACE_RATE_LIMIT`: (default: 1000) - Requests per minute.
+
+- **AimlAPI:**
+  - `AIMLAPI_API_KEY`: Your AimlAPI key.
+  - `AIMLAPI_MODEL`: (default: `aiml/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo`) - The model to use.
+  - `AIMLAPI_RATE_LIMIT`: (default: 500) - Requests per minute.
+
+- **OpenAI:**
+  - `OPENAI_API_KEY`: Your OpenAI API key.
+  - `OPENAI_MODEL`: (default: `gpt-3.5-turbo`) - The model to use.
+  - `OPENAI_RATE_LIMIT`: (default: 3000) - Requests per minute.
+
+### Upgrade Path
+
+To upgrade from the default rule-based provider to an AI provider:
+1.  Set the `AI_PROVIDER` environment variable to your desired provider (e.g., `openai`).
+2.  Provide the necessary API key and configuration for that provider (e.g., `OPENAI_API_KEY`).
+3.  Restart the worker application.
+
+The system will automatically switch to the new provider. If the provider fails, it will fall back to the rule-based provider, ensuring prophecies are still generated.

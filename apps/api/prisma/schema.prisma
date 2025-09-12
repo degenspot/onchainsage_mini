@@ -17,6 +17,7 @@ model Token {
   socialSnaps  SocialSnapshot[]
   signals      Signal[]
   prophecies   Prophecy[]
+  tweets       Tweet[]
 }
 
 model MarketSnapshot {
@@ -38,9 +39,37 @@ model SocialSnapshot {
   mentions1h  Int
   mentions24h Int
   slope       Float
+  // sentiment aggregation from Hugging Face
+  sentimentScore   Float?
+  positiveRatio    Float?
+  negativeRatio    Float?
+  sentimentAnalyzed Int?
   at          DateTime @default(now())
   token       Token    @relation(fields: [tokenId], references: [id])
   @@index([tokenId, at])
+}
+
+model Tweet {
+  id                String   @id @default(cuid())
+  tokenId           String
+  tweetId           String   @unique
+  text              String
+  author            String
+  authorDisplayName String?
+  // sentiment for this tweet
+  sentimentLabel    String?
+  sentimentScore    Float?
+  sentimentAnalyzedAt DateTime?
+  createdAt         DateTime
+  collectedAt       DateTime @default(now())
+  likes             Int      @default(0)
+  retweets          Int      @default(0)
+  replies           Int      @default(0)
+  relevanceScore    Float?
+  token             Token    @relation(fields: [tokenId], references: [id])
+
+  @@index([tokenId, createdAt])
+  @@index([createdAt])
 }
 
 model Signal {
@@ -65,6 +94,8 @@ model Prophecy {
   token           Token    @relation(fields: [tokenId], references: [id])
   criteria        Json
   thesis          String?
+  thesisProvider  String?
+  thesisConfidence Float?
   narrativeScore  Float?
   criteriaMatched Json?
   socialSignals   Json?

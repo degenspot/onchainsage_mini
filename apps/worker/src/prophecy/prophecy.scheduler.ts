@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { REDIS_PUB } from '../redis/redis.module';
 import { CriteriaEngine } from '@onchainsage/scoring/criteria-engine';
 import { NarrativeAnalyzer } from '@onchainsage/narrative/narrative-analyzer';
-import { getAIProvider, AIProvider } from '@onchainsage/ai/ai-provider';
+import { AIProvider, AIProviderFactory } from '@onchainsage/ai';
 import { Signal, Token } from '@prisma/client';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class ProphecyScheduler {
   ) {
     this.criteriaEngine = new CriteriaEngine();
     this.narrativeAnalyzer = new NarrativeAnalyzer();
-    this.aiProvider = getAIProvider();
+    this.aiProvider = AIProviderFactory.getInstance().getDefaultProvider();
   }
 
   // Use a Cron job so Nest can manage lifecycle; in dev we still run every 2 minutes.
@@ -74,11 +74,22 @@ export class ProphecyScheduler {
       const narrativeResult = this.narrativeAnalyzer.analyze(socialSnap, { symbol: signal.token.symbol });
       
       // 5. Generate thesis
-      const thesis = await this.aiProvider.generateThesis(
-        { ...marketSnap, symbol: signal.token.symbol },
-        criteriaResult.matched,
-        narrativeResult
-      );
+      let thesisResult;
+      try {
+        thesisResult = await this.aiProvider.generateThesis(
+          { ...marketSnap, symbol: signal.token.symbol },
+          criteriaResult.matched,
+          narrativeResult
+        );
+      } catch (err) {
+        this.logger.warn(`AI provider failed, falling back to rule-based: ${err}`);
+        const fallback = AIProviderFactory.getInstance().getFallbackProvider();
+        thesisResult = await fallback.generateThesis(
+            { ...marketSnap, symbol: signal.token.symbol },
+            criteriaResult.matched,
+            narrativeResult
+        );
+      }
       
       // 6. Create prophecy if it doesn't already exist for today
       const rank = created.length + 1;
@@ -91,7 +102,9 @@ export class ProphecyScheduler {
         score: signal.score,
         rank,
         criteria: criteriaResult as any, // Cast to 'any' for Prisma
-        thesis,
+        thesis: thesisResult.thesis,
+        thesisProvider: thesisResult.provider,
+        thesisConfidence: thesisResult.confidence,
         narrativeScore: narrativeResult.coherence,
         criteriaMatched: criteriaResult.matched as any, // Cast to 'any' for Prisma
         socialSignals: narrativeResult as any,

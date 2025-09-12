@@ -14,12 +14,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    "paths": {
-      "@onchainsage/scoring/*": ["../../packages/scoring/dist/*"],
-      "@onchainsage/narrative/*": ["../../packages/narrative/dist/*"],
-      "@onchainsage/ai/*": ["../../packages/ai/dist/*"],
-      "@onchainsage/connectors/*": ["../../packages/connectors/dist/*"]
-    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,

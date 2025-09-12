@@ -1,6 +1,10 @@
 export interface SocialData {
     mentions24h: number;
     slope: number;
+    sentimentScore?: number;
+    positiveRatio?: number;
+    negativeRatio?: number;
+    sentimentAnalyzed?: number;
     // Potentially more raw data from SocialSnapshot
 }
 
@@ -32,7 +36,12 @@ export class NarrativeAnalyzer {
     }
 
     private calculateSentiment(socialData: SocialData): number {
-        // Replace with actual sentiment analysis
+        // prefer real sentiment when available
+        if (typeof socialData.sentimentScore === 'number' && typeof socialData.sentimentAnalyzed === 'number' && socialData.sentimentAnalyzed > 0) {
+            // weight sentiment by number analyzed
+            return socialData.sentimentScore * Math.min(1, socialData.sentimentAnalyzed / 50);
+        }
+        // fallback to slope heuristic
         if (socialData.slope > 0) return 0.75;
         if (socialData.slope < 0) return -0.5;
         return 0.1;

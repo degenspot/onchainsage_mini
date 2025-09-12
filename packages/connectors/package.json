@@ -4,10 +4,18 @@
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./dist/index.js",
+    "./social": "./dist/social/index.js",
+    "./risk": "./dist/risk/index.js"
+  },
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
   },
   "dependencies": {
+    "@the-convocation/twitter-scraper": "^0.18.2",
     "axios": "^1.4.0"
   },
   "devDependencies": {
